@@ -1,0 +1,8 @@
+{
+  "database": {
+    "name": "stryking",
+    "host": "104.198.186.158",
+    "logging": false,
+    "dialect": "mysql"
+  }
+}
