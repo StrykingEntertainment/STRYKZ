@@ -1,0 +1,17 @@
+{
+  "name": "stryking-eth-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ethereumjs-wallet": "^0.6.0",
+    "express": "^4.16.3",
+    "web3": "^1.0.0-beta.34"
+  }
+}
