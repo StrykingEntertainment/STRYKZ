@@ -23,6 +23,10 @@ module.exports = (function(){
     getUserCount: async () => {
       const User = await _private.tables.User;
       return User.count();
+    },
+    getUser: async (id) => {
+      const User = await _private.tables.User;
+      return User.findOne({where: {id}})
     }
   }
 

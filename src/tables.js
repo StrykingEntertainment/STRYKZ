@@ -8,8 +8,11 @@ module.exports = function(sequelize) {
         name: {
           type: Sequelize.STRING,
         },
-        wallet: {
+        publicKey: {
           type: Sequelize.STRING,
+        },
+        index: {
+          type: Sequelize.INTEGER,
         }
       }
     ),
