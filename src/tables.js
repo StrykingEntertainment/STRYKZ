@@ -13,6 +13,7 @@ module.exports = function(sequelize) {
         },
         index: {
           type: Sequelize.INTEGER,
+          unique: true,
         }
       }
     ),
