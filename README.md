@@ -8,4 +8,4 @@ To start it:
   - npm install
   - npm start
 
-There's also the solidity contract for the Stryking token. To deploy it, go to the solidity folder and run "truffle migrate"
+There's also the solidity contract for the Stryking token. To deploy it, go to the solidity folder and run "truffle migrate --network=ropsten"
