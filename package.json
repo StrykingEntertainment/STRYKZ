@@ -13,9 +13,10 @@
     "ethereumjs-util": "^5.2.0",
     "ethereumjs-wallet": "^0.6.0",
     "express": "^4.16.3",
+    "leftpad": "0.0.1",
     "mysql2": "^1.5.3",
     "sequelize": "^4.37.10",
     "truffle-hdwallet-provider": "0.0.5",
-    "web3": "^0.20"
+    "web3": "^0.20.6"
   }
 }
