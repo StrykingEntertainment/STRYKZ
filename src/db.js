@@ -20,7 +20,6 @@ module.exports = (function(){
   const _private = {
     tables: require('./tables.js')(sequelize),
     getChildWallet: (index) => {
-      debugger;
       return hdWallet.deriveChild(index).getWallet();
     }
   }
@@ -45,7 +44,6 @@ module.exports = (function(){
     },
     generateUser: async (name) => {
       const maxIndex = await _public.getMaxIndex();
-      debugger;
       const currentIndex = maxIndex + 1;
       const childWallet = _private.getChildWallet(currentIndex);
       const User = await _private.tables.User;

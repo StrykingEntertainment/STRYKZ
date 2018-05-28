@@ -14,7 +14,6 @@ app.get('/getChildWallet', async (req, res) => {
     const childWallet = wallet.getChildWallet(req.query.index);
     const privateKey = childWallet.getPrivateKey().toString('hex');
     const publicKey = childWallet.getPublicKey().toString('hex');
-    debugger;
     const address = ethUtils.pubToAddress(Buffer.from(childWallet.getPublicKey())).toString('hex');
     const msg = { index: req.query.index, privateKey, publicKey, address };
     res.send(msg);
@@ -23,6 +22,7 @@ app.get('/getChildWallet', async (req, res) => {
 app.get('/getUser/', async (req, res) => {
   if (isNaN(Number(req.query.id))) {
     res.status(400).send('Please specify the user id');
+    return;
   }
   const user = await db.getUser(req.query.id);
   if (user === null) {
