@@ -1,7 +1,8 @@
 const settings = require('../settings.json');
 const secrets = require('../secrets.json');
 const Sequelize = require('sequelize');
-const hdWallet = require('./wallet.js');
+const wallet = require('./wallet.js');
+const hdWallet = wallet.hdWallet;
 
 module.exports = (function(){
 
