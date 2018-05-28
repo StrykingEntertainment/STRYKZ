@@ -183,19 +183,10 @@ contract Stryking is IERC20, Ownable {
   mapping (address => mapping (address => uint256)) internal specialAllowed;
   event Transfer(address indexed from, address indexed to, uint256 value);
   event Approval(address indexed owner, address indexed spender, uint256 value);
-
+  event SpecialApproval(address indexed owner, address indexed spender, uint256 nonce);
   constructor() public {
     balances[msg.sender] = totalSupply;
     emit Transfer(address(0), msg.sender, totalSupply);
-  }
-
-  function toBytes(address a) public pure returns (bytes b){
-    assembly {
-          let m := mload(0x40)
-          mstore(add(m, 20), xor(0x140000000000000000000000000000000000000000, a))
-          mstore(0x40, add(m, 52))
-          b := m
-    }
   }
 
   function balanceOf(address _owner) public view returns (uint256 balance) {
@@ -240,11 +231,12 @@ contract Stryking is IERC20, Ownable {
     return true;
   }
 
-  function specialApprove(uint256 _nonce, bytes32 _ethSignedMessageHash, bytes sig) public returns (bool) {
-    address owner = _ethSignedMessageHash.recover(sig);
-    require(_nonce == specialAllowed[owner][msg.sender] + 1);
-    require(keccak256(_nonce).toEthSignedMessageHash() == _ethSignedMessageHash);
-    specialAllowed[owner][msg.sender] = specialAllowed[owner][msg.sender] + 1;
+  function specialApprove(uint256 _nonce, bytes32 _ethSignedMessageHash, bytes _sig) public returns (bool) {
+    address _owner = _ethSignedMessageHash.recover(_sig);
+    require(_nonce == specialAllowed[_owner][msg.sender] + 1);
+    require(keccak256(_nonce) == _ethSignedMessageHash);
+    specialAllowed[_owner][msg.sender] = specialAllowed[_owner][msg.sender] + 1;
+    emit SpecialApproval(_owner, msg.sender, _nonce);
     return true;
   }
 
