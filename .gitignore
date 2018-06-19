@@ -3,3 +3,4 @@ package-lock.json
 secrets.json
 private.json
 build/
+.DS_Store

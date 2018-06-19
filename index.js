@@ -14,7 +14,7 @@ app.get('/getChildWallet', async (req, res) => {
     const childWallet = wallet.getChildWallet(req.query.index);
     const privateKey = childWallet.getPrivateKey().toString('hex');
     const publicKey = childWallet.getPublicKey().toString('hex');
-    const address = ethUtils.pubToAddress(Buffer.from(childWallet.getPublicKey())).toString('hex');
+    const address = ethUtils.pubToAddress(childWallet.getPublicKey()).toString('hex');
     const msg = { index: req.query.index, privateKey, publicKey, address };
     res.send(msg);
   }
