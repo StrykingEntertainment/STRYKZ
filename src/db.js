@@ -25,6 +25,51 @@ module.exports = (function(){
   }
 
   const _public = {
+    createLog: async (severity, message, data) => {
+      const Log = await _private.tables.Log;
+      try {
+        return await Log.create({severity, message, data});
+      } catch (e) {
+        return e;
+      }
+    },
+    getLogById: async (id) => {
+      const Log = await _private.tables.Log;
+      try {
+        return await Log.findById(id);
+      } catch (e) {
+        return (e);
+      }
+    },
+    getLogs: async (limit) => {
+      if (limit === undefined) limit = 100;
+      const Log = await _private.tables.Log;
+      try {
+        return await Log.findAll({
+          limit,
+          order: [['createdAt', 'DESC']]
+        });
+      } catch (e) {
+        return e;
+      }
+    },
+    getWalletLogs: async (limit) => {
+      if (limit === undefined) limit = 100;
+      const Log = await _private.tables.Log;
+      try {
+        return await Log.findAll({
+          limit,
+          where: {
+            severity: 'LOG',
+            message: {
+              $like: '%' + 'WALLET' + '%'
+            }
+          }
+        });
+      } catch (e) {
+        return e;
+      }
+    },
     getUserCount: async () => {
       const User = await _private.tables.User;
       return User.count();

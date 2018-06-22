@@ -17,6 +17,19 @@ module.exports = function(sequelize) {
         }
       }
     ),
+    Log: sequelize.define(
+      'log', {
+        severity: {
+          type: Sequelize.STRING,
+        },
+        message: {
+          type: Sequelize.STRING,
+        },
+        data: {
+          type: Sequelize.TEXT,
+        }
+      }
+    )
   }
 
   const _public = {};
