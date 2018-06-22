@@ -10,7 +10,8 @@ const Tx = require('ethereumjs-tx');
 module.exports = (function (){
   let fundsWallet, fundsWalletAddress, _private, _public;
   const setup = promise();
-  const strykingContract = web3.eth.contract(abi.stryking).at(settings.strykingDeployedAddress);
+  const strykingContract = web3.eth.contract(abi.stryking).at(settings.deployedContractAddresses.stryking);
+
   (async () => {
     try {
       // make all async calls first
@@ -75,13 +76,13 @@ module.exports = (function (){
       const to = strykingContract.address;
       const value = '0x00';
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
-      const data = _private._specialApproveGetData(
+      const data = await _private._specialApproveGetData(
         await _private._getApprovalNonce(userId),
         Buffer.from(userWallet.privateKey)
       );
       return {
         nonce: await accountNonce,
-        gasPrice: await gasPrice,
+        gasPrice: (await gasPrice).toNumber(),
         gasLimit: await gasLimit,
         to,
         value,
@@ -89,11 +90,11 @@ module.exports = (function (){
       };
     },
     _signRawTx: (rawTx, privateKey) => {
-      const tx = new Tx(rawTx);
+      let tx = new Tx(rawTx);
       tx.sign(privateKey);
       return tx;
     },
-    _serializeSignedTx: (signedTx) => {
+    _serializeSignedTx: (tx) => {
       return tx.serialize();
     }
   };

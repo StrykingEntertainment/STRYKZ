@@ -6,6 +6,8 @@ const db = require('./src/db.js');
 const wallet = require('./src/wallet.js');
 const logger = require('./src/logger.js');
 const blockchain = require('./src/blockchain.js');
+const web3 = require('./src/web3.js')
+
 
 app.get('/', (req, res) => res.send('Stryking Eth Server'));
 
@@ -67,8 +69,9 @@ app.post('/tokenTransferFrom', async (req, res) => {
 
 app.get('/test', async (req, res) => {
   const userId = 1;
-  const userWallet = wallet.getChildWallet(userId);
+  const userWallet = wallet.parseWallet(wallet.getChildWallet(userId));
   const rawTx = await blockchain._generateRawTxForApprovalToggle(userId);
+  console.log(rawTx);
   const signedTx = blockchain._signRawTx(rawTx, Buffer.from(userWallet.privateKey, 'hex'));
   const serializedTx = blockchain._serializeSignedTx(signedTx);
   web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
