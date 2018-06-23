@@ -42,9 +42,6 @@ module.exports = (function (){
       });
       return await p.promise;
     },
-    _estimateGas: async () => {
-
-    },
     _sign: (data, privateKeyBuffer) => {
       if (data === undefined) throw new Error('no data to sign');
       if (privateKeyBuffer === undefined) throw new Error('no private key provided');
@@ -88,7 +85,6 @@ module.exports = (function (){
       await setup.promise;
       const accountNonce = _private._getFundsWalletNonce();
       const gasPrice = _private._getGasPrice();
-      // const estimatedGasLimit = _private._estimateGas(strykingContract.specialApprove);
       const to = strykingContract.address;
       const value = web3.toHex(web3.toWei('0', 'ether'));
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
@@ -104,8 +100,8 @@ module.exports = (function (){
       );
       return {
         nonce: web3.toHex(await accountNonce),
-        gasPrice: 10000000000, //Math.min((await gasPrice).toNumber()*2, 10000000000),
-        gasLimit: 2900000, //2 * await estimatedGas,
+        gasPrice: Math.min((await gasPrice).toNumber()*2, 10000000000), // 10000000000
+        gasLimit: 2 * await estimatedGas, // 2900000
         to,
         from: fundsWalletAddress,
         value,
