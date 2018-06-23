@@ -69,15 +69,11 @@ module.exports = (function (){
     },
     _specialApproveGetData: async (nonce, privateKeyBuffer) => {
       await setup.promise;
-      console.log('nonce', nonce);
-      console.log('signedNonce', _private._messageHash(nonce));
-      console.log('sign', _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer));
       const res = await strykingContract.specialApprove.getData(
         nonce,
         _private._messageHash(nonce),
         _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
       );
-      console.log(res);
       return res;
     },
     _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
@@ -96,10 +92,8 @@ module.exports = (function (){
       const to = strykingContract.address;
       const value = web3.toHex(web3.toWei('0', 'ether'));
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
-      console.log('USING USER WALLET WITH ADDRESS', userWallet.address);
       const currentNonce = await _private._getApprovalNonce(userId);
       const approvalNonce = currentNonce + 1;
-      console.log(approvalNonce, 'APPROVAL NONCEEE')
       const data = _private._specialApproveGetData(
         approvalNonce,
         Buffer.from(userWallet.privateKey, 'hex')

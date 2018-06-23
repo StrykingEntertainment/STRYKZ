@@ -71,15 +71,12 @@ app.get('/test', async (req, res) => {
   const userId = 4;
   const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
   const rawTx = await blockchain._generateRawTxForApprovalToggle(userId);
-  console.log(rawTx);
   const signedTx = blockchain._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
   const serializedTx = blockchain._serializeSignedTx(signedTx);
-  console.log(serializedTx.toString('hex'));
   web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
     if (err) {
       throw new Error(err);
     } else {
-      console.log('SUCCESS');
       res.send(hash);
     }
   });
