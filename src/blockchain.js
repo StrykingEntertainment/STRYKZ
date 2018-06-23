@@ -27,7 +27,7 @@ module.exports = (function (){
   })();
   _private = {
     contract: web3.eth.contract(abi.stryking).at(settings.strykingDeployedAddress),
-    _ethSignedMessageHash: nonce => keccak256(nonce),
+    _messageHash: nonce => keccak256(nonce),
     _generateRawTx: () => {},
     _getFundsWalletNonce: async (walletAddress) => {
       if (walletAddress === undefined) walletAddress = fundsWalletAddress;
@@ -42,49 +42,73 @@ module.exports = (function (){
       });
       return await p.promise;
     },
-    _getGasLimit: async () => {
-      const p = promise();
-      const block = await web3.eth.getBlock('latest');
-      return block.gasLimit;
+    // _getGasLimit: async () => {
+    //   const p = promise();
+    //   const block = await web3.eth.getBlock('latest');
+    //   return block.gasLimit;
+    // },
+    _estimateGas: async () => {
+
     },
-    _sign: (data, privateKey) => {
+    _sign: (data, privateKeyBuffer) => {
       if (data === undefined) throw new Error('no data to sign');
-      if (privateKey === undefined) throw new Error('no private key provided');
-      return (ethUtils.ecsign(
-        ethUtils.toBuffer(keccak256(0)),
-        Buffer.from(fundsWallet.privateKey, 'hex')
-      ).r).toString('hex');
+      if (privateKeyBuffer === undefined) throw new Error('no private key provided');
+      var res = ethUtils.ecsign(
+        data,
+        privateKeyBuffer
+      );
+      return '0x' + res.r.toString('hex').slice(0,64) + res.s.toString('hex').slice(0,64) + res.v.toString(16).slice(0,2);
     },
     _getApprovalNonce: (userId) => {
       return 1; // TODO: call web3 and get next nonce
     },
-    _specialApproveGetData: async (nonce, privateKey) => {
+    _specialApproveGetData: async (nonce, privateKeyBuffer) => {
       await setup;
       if (nonce === undefined) nonce = _private._getApprovalNonce();
-      return await strykingContract.specialApprove.getData(
+      console.log('nonce', nonce);
+      console.log('signedNonce', _private._messageHash(nonce));
+      console.log('sign', _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer));
+      const res = await strykingContract.specialApprove.getData(
         nonce,
-        _private._ethSignedMessageHash(nonce),
-        _private._sign(keccak256(nonce), privateKey)
+        _private._messageHash(nonce),
+        _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
+      );
+      console.log(res);
+      return res;
+    },
+    _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
+      await setup;
+      if (nonce === undefined) nonce = _private._getApprovalNonce();
+      return await strykingContract.specialApprove.estimateGas(
+        nonce,
+        _private._messageHash(nonce),
+        _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
       );
     },
     _generateRawTxForApprovalToggle: async (userId) => {
       await setup;
-      debugger;
       const accountNonce = _private._getFundsWalletNonce();
       const gasPrice = _private._getGasPrice();
-      const gasLimit = _private._getGasLimit();
+      // const estimatedGasLimit = _private._estimateGas(strykingContract.specialApprove);
       const to = strykingContract.address;
-      const value = '0x00';
+      const value = web3.toHex(web3.toWei('0', 'ether'));
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
-      const data = await _private._specialApproveGetData(
-        await _private._getApprovalNonce(userId),
-        Buffer.from(userWallet.privateKey)
+      console.log('USING USER WALLET WITH ADDRESS', userWallet.address);
+      const approvalNonce = await _private._getApprovalNonce(userId);
+      const data = _private._specialApproveGetData(
+        approvalNonce,
+        Buffer.from(userWallet.privateKey, 'hex')
+      );
+      const estimatedGas = _private._specialApproveEstimateGas(
+        approvalNonce,
+        Buffer.from(userWallet.privateKey, 'hex')
       );
       return {
-        nonce: await accountNonce,
-        gasPrice: (await gasPrice).toNumber(),
-        gasLimit: await gasLimit,
+        nonce: web3.toHex(await accountNonce),
+        gasPrice: 10000000000, //Math.min((await gasPrice).toNumber()*2, 10000000000),
+        gasLimit: 2900000, //2 * await estimatedGas,
         to,
+        from: fundsWalletAddress,
         value,
         data: await data
       };

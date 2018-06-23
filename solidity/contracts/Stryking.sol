@@ -79,10 +79,10 @@ library ECRecovery {
   {
     // 32 is the length in bytes of hash,
     // enforced by the type signature above
-    return keccak256(
+    return keccak256(abi.encode(
       "\x19Ethereum Signed Message:\n32",
       hash
-    );
+    ));
   }
 }
 
@@ -234,7 +234,7 @@ contract Stryking is IERC20, Ownable {
   function specialApprove(uint256 _nonce, bytes32 _ethSignedMessageHash, bytes _sig) public returns (bool) {
     address _owner = _ethSignedMessageHash.recover(_sig);
     require(_nonce == specialAllowed[_owner][msg.sender] + 1);
-    require(keccak256(_nonce) == _ethSignedMessageHash);
+    require(keccak256(abi.encode(_nonce)) == _ethSignedMessageHash);
     specialAllowed[_owner][msg.sender] = specialAllowed[_owner][msg.sender] + 1;
     emit SpecialApproval(_owner, msg.sender, _nonce);
     return true;
