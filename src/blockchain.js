@@ -31,7 +31,7 @@ module.exports = (function (){
     _generateRawTx: () => {},
     _getFundsWalletNonce: async (walletAddress) => {
       if (walletAddress === undefined) walletAddress = fundsWalletAddress;
-      await setup;
+      await setup.promise;
       return await web3.eth.getTransactionCount(walletAddress);
     },
     _getGasPrice: async () => {
@@ -42,11 +42,6 @@ module.exports = (function (){
       });
       return await p.promise;
     },
-    // _getGasLimit: async () => {
-    //   const p = promise();
-    //   const block = await web3.eth.getBlock('latest');
-    //   return block.gasLimit;
-    // },
     _estimateGas: async () => {
 
     },
@@ -57,14 +52,23 @@ module.exports = (function (){
         data,
         privateKeyBuffer
       );
+      // spec that Ethereum uses for a ECDSA signature
       return '0x' + res.r.toString('hex').slice(0,64) + res.s.toString('hex').slice(0,64) + res.v.toString(16).slice(0,2);
     },
-    _getApprovalNonce: (userId) => {
-      return 1; // TODO: call web3 and get next nonce
+    _getApprovalNonce: async (userId) => {
+      const p = promise();
+      const userWalletAddress = '0x' + wallet.parseWallet(await wallet.getChildWallet(userId)).address;
+      strykingContract.specialAllowance(userWalletAddress, fundsWalletAddress, (err, res) => {
+        if (err) {
+          p.reject(err);
+        } else {
+          p.resolve(res.toNumber());
+        }
+      });
+      return p.promise;
     },
     _specialApproveGetData: async (nonce, privateKeyBuffer) => {
-      await setup;
-      if (nonce === undefined) nonce = _private._getApprovalNonce();
+      await setup.promise;
       console.log('nonce', nonce);
       console.log('signedNonce', _private._messageHash(nonce));
       console.log('sign', _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer));
@@ -77,8 +81,7 @@ module.exports = (function (){
       return res;
     },
     _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
-      await setup;
-      if (nonce === undefined) nonce = _private._getApprovalNonce();
+      await setup.promise;
       return await strykingContract.specialApprove.estimateGas(
         nonce,
         _private._messageHash(nonce),
@@ -86,7 +89,7 @@ module.exports = (function (){
       );
     },
     _generateRawTxForApprovalToggle: async (userId) => {
-      await setup;
+      await setup.promise;
       const accountNonce = _private._getFundsWalletNonce();
       const gasPrice = _private._getGasPrice();
       // const estimatedGasLimit = _private._estimateGas(strykingContract.specialApprove);
@@ -94,7 +97,9 @@ module.exports = (function (){
       const value = web3.toHex(web3.toWei('0', 'ether'));
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
       console.log('USING USER WALLET WITH ADDRESS', userWallet.address);
-      const approvalNonce = await _private._getApprovalNonce(userId);
+      const currentNonce = await _private._getApprovalNonce(userId);
+      const approvalNonce = currentNonce + 1;
+      console.log(approvalNonce, 'APPROVAL NONCEEE')
       const data = _private._specialApproveGetData(
         approvalNonce,
         Buffer.from(userWallet.privateKey, 'hex')

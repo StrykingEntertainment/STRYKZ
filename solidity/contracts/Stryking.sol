@@ -174,7 +174,7 @@ contract Stryking is IERC20, Ownable {
   using ECRecovery for bytes32;
 
   string public name = "Stryking Token";
-  string public symbol = "STRYKZZ";
+  string public symbol = "STZ";
   uint8 public constant decimals = 18;
   uint256 public constant decimalFactor = 10 ** uint256(decimals);
   uint256 public constant totalSupply = 2000000000 * decimalFactor;
@@ -197,8 +197,8 @@ contract Stryking is IERC20, Ownable {
     return allowed[_owner][_spender];
   }
 
-  function specialAllowance(address _owner, address _spender) public view returns (bool) {
-    return specialAllowed[_owner][_spender] % 2 == 1;
+  function specialAllowance(address _owner, address _spender) public view returns (uint256) {
+    return specialAllowed[_owner][_spender];
   }
 
   function transfer(address _to, uint256 _value) public returns (bool) {
