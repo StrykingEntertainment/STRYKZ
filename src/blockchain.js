@@ -75,7 +75,7 @@ module.exports = (function (){
     },
     _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
       await setup.promise;
-      return await strykingContract.specialApprove.estimateGas(
+      return await strykingContract.specialApprove.estimateGas( // TODO: failing..?
         nonce,
         _private._messageHash(nonce),
         _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
@@ -101,7 +101,7 @@ module.exports = (function (){
       return {
         nonce: web3.toHex(await accountNonce),
         gasPrice: Math.min((await gasPrice).toNumber()*2, 10000000000), // 10000000000
-        gasLimit: 2 * await estimatedGas, // 2900000
+        gasLimit: 2900000, //2 * await estimatedGas, // 
         to,
         from: fundsWalletAddress,
         value,
@@ -115,6 +115,23 @@ module.exports = (function (){
     },
     _serializeSignedTx: (tx) => {
       return tx.serialize();
+    },
+    toggleUserSpecialApproval: async (userId) => {
+      await setup.promise;
+      const p = promise();
+      const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
+      const rawTx = await _private._generateRawTxForApprovalToggle(userId);
+      const signedTx = _private._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
+      const serializedTx = _private._serializeSignedTx(signedTx);
+      web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
+        if (err) {
+          p.reject(err);
+        } else {
+          p.resolve(hash);
+        }
+      });
+
+      return p.promise;
     }
   };
 
@@ -127,7 +144,8 @@ module.exports = (function (){
     _signTx: _private._signTx,
     _signRawTx: _private._signRawTx,
     _generateRawTxForApprovalToggle: _private._generateRawTxForApprovalToggle,
-    _serializeSignedTx: _private._serializeSignedTx
+    _serializeSignedTx: _private._serializeSignedTx,
+    toggleUserSpecialApproval: _private.toggleUserSpecialApproval
   };
 
   return _public;

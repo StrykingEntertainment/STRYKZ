@@ -67,19 +67,18 @@ app.post('/tokenTransferFrom', async (req, res) => {
   res.send('token transfer from');
 });
 
-app.get('/test', async (req, res) => {
-  const userId = 4;
-  const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
-  const rawTx = await blockchain._generateRawTxForApprovalToggle(userId);
-  const signedTx = blockchain._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
-  const serializedTx = blockchain._serializeSignedTx(signedTx);
-  web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
-    if (err) {
-      throw new Error(err);
-    } else {
-      res.send(hash);
-    }
-  });
+app.post('/toggleUserSpecialApproval', async (req, res) => {
+  if (req.body.userId === undefined) {
+    res.status(400).send('Please specify the userId');
+    return;
+  }
+  const userId = req.body.userId;
+  try {
+    res.send(await blockchain.toggleUserSpecialApproval(userId));
+  } catch (e) {
+    console.log(e);
+    res.status(500).send(e);
+  }
 });
 
 app.get('/logs', async (req, res) => {
