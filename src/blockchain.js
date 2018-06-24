@@ -6,11 +6,25 @@ const wallet = require('./wallet.js');
 const promise = require('./promise.js');
 const ethUtils = require('ethereumjs-util');
 const Tx = require('ethereumjs-tx');
+let network;
+switch (settings.networkId) {
+  case 1:
+    network = 'mainnet';
+    break;
+  case 3:
+    network = 'ropsten';
+    break;
+  case 4:
+    network = 'rinkeby';
+    break;
+  default:
+    network = 'development';
+}
 
 module.exports = (function (){
   let fundsWallet, fundsWalletAddress, _private, _public;
   const setup = promise();
-  const strykingContract = web3.eth.contract(abi.stryking).at(settings.deployedContractAddresses.stryking);
+  const _strykingContract = web3.eth.contract(abi.stryking).at(settings[network].deployedContractAddresses.stryking);
 
   (async () => {
     try {
@@ -28,7 +42,6 @@ module.exports = (function (){
   _private = {
     contract: web3.eth.contract(abi.stryking).at(settings.strykingDeployedAddress),
     _messageHash: nonce => keccak256(nonce),
-    _generateRawTx: () => {},
     _getFundsWalletNonce: async (walletAddress) => {
       if (walletAddress === undefined) walletAddress = fundsWalletAddress;
       await setup.promise;
@@ -42,7 +55,7 @@ module.exports = (function (){
       });
       return await p.promise;
     },
-    _sign: (data, privateKeyBuffer) => {
+    ethSign: (data, privateKeyBuffer) => {
       if (data === undefined) throw new Error('no data to sign');
       if (privateKeyBuffer === undefined) throw new Error('no private key provided');
       var res = ethUtils.ecsign(
@@ -53,9 +66,10 @@ module.exports = (function (){
       return '0x' + res.r.toString('hex').slice(0,64) + res.s.toString('hex').slice(0,64) + res.v.toString(16).slice(0,2);
     },
     _getApprovalNonce: async (userId) => {
+      await setup.promise;
       const p = promise();
       const userWalletAddress = '0x' + wallet.parseWallet(await wallet.getChildWallet(userId)).address;
-      strykingContract.specialAllowance(userWalletAddress, fundsWalletAddress, (err, res) => {
+      _strykingContract.specialAllowance(userWalletAddress, fundsWalletAddress, (err, res) => {
         if (err) {
           p.reject(err);
         } else {
@@ -66,26 +80,31 @@ module.exports = (function (){
     },
     _specialApproveGetData: async (nonce, privateKeyBuffer) => {
       await setup.promise;
-      const res = await strykingContract.specialApprove.getData(
+      const res = await _strykingContract.specialApprove.getData(
         nonce,
         _private._messageHash(nonce),
-        _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
+        _private.ethSign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
       );
       return res;
     },
     _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
       await setup.promise;
-      return await strykingContract.specialApprove.estimateGas( // TODO: failing..?
-        nonce,
-        _private._messageHash(nonce),
-        _private._sign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
-      );
+      try {
+        return 2 * await _strykingContract.specialApprove.estimateGas( // TODO: failing..?
+          nonce,
+          _private._messageHash(nonce),
+          _private.ethSign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
+        );
+      } catch (e) {
+        console.log("gas estimation error: using default gasLimit of 2900000")
+        return 2900000;
+      }
     },
     _generateRawTxForApprovalToggle: async (userId) => {
       await setup.promise;
       const accountNonce = _private._getFundsWalletNonce();
       const gasPrice = _private._getGasPrice();
-      const to = strykingContract.address;
+      const to = _strykingContract.address;
       const value = web3.toHex(web3.toWei('0', 'ether'));
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
       const currentNonce = await _private._getApprovalNonce(userId);
@@ -100,13 +119,107 @@ module.exports = (function (){
       );
       return {
         nonce: web3.toHex(await accountNonce),
-        gasPrice: Math.min((await gasPrice).toNumber()*2, 10000000000), // 10000000000
+        gasPrice: Math.min((await gasPrice).toNumber() * 2, 10000000000), // 10000000000
         gasLimit: 2900000, //2 * await estimatedGas, // 
         to,
         from: fundsWalletAddress,
         value,
         data: await data
       };
+    },
+    _generateRawTx: async (contract, method, args = [], options = {}) => {
+      await setup.promise;
+      if (contract === undefined) throw new Error('contract is undefined');
+      if (method === undefined) throw new Error('method is undefined');
+      if (!Array.isArray(args)) throw new Error('args is not an array');
+      if (typeof options !== 'object') throw new Error('options is not an object');
+      const accountNonce = _private._getFundsWalletNonce();
+      const gasPrice = _private._getGasPrice();
+      const to = options.to !== undefined ? options.to : contract.address;
+      if (typeof to !== 'string' || to === '') throw new Error('to is not an address');
+      const from = options.from !== undefined? options.to : fundsWalletAddress;
+      const value = options.value !== undefined ? options.value : web3.toHex(web3.toWei('0', 'ether'));
+      const data = _private._getData(contract, method, args);
+      const estimatedGas = _private._estimateGas(contract, method, args);
+      return {
+        nonce: web3.toHex(await accountNonce),
+        gasPrice: Math.min((await gasPrice).toNumber() * 2, 10000000000), // max 10 Gwei
+        gasLimit: await estimatedGas,
+        to,
+        from,
+        value,
+        data: await data
+      }
+    },
+    strykingContract: () => {
+      let res = {};
+      for (let method in _strykingContract.methods) {
+        res[method] = async function() {
+          await setup.promise;
+          const p = promise();
+          const rawTx = await _private
+          // TODO: continue writing after implementing generaterawtxformethod
+
+          return p.promise;
+        }
+      }
+
+      return res;
+    },
+    _sendRawTransaction: async (serializedTx) => {
+      const p = promise();
+      web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
+        if (err) {
+          p.reject(err);
+        } else {
+          p.resolve(hash);
+        }
+      });
+      return p.promise;
+    },
+    toggleUserSpecialApproval: async (userId) => {
+      await setup.promise;
+      // const rawTx = await _private._generateRawTxForApprovalToggle(userId);
+      const currentNonce = _private._getApprovalNonce(userId);
+      const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
+      const approvalNonce = await currentNonce + 1;
+      const rawTx = await _private._generateRawTx(
+        _strykingContract,
+        'specialApprove',
+        [
+          approvalNonce,
+          '0x' + keccak256(approvalNonce),
+          _private.ethSign(
+            ethUtils.toBuffer(keccak256(approvalNonce)),
+            Buffer.from(userWallet.privateKey, 'hex')
+          )
+        ]
+      );
+      const signedTx = _private._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
+      const serializedTx = _private._serializeSignedTx(signedTx);
+      return _private._sendRawTransaction(serializedTx);
+    },
+    _getData: async (contract, method, args) => {
+      if (typeof contract !== 'object') throw new Error('contract is not an object');
+      if (typeof method !== 'string') throw new Error('method name is not a string');
+      if (!Array.isArray(args)) throw new Error('args is not an array');
+      try {
+        return await contract[method].getData.apply(contract[method], args);
+      } catch (e) {
+        console.log('getData error');
+        throw new Error(e);
+      }
+    },
+    _estimateGas: async (contract, method, args) => {
+      if (typeof contract !== 'object') throw new Error('contract is not an object');
+      if (typeof method !== 'string') throw new Error('method name is not a string');
+      if (!Array.isArray(args)) throw new Error('args is not an array');
+      try {
+        return 2 * await contract[method].estimateGas.apply(contract[method], args);
+      } catch (e) {
+        console.log("gas estimation error: using default gasLimit of 2900000")
+        return 2900000;
+      }
     },
     _signRawTx: (rawTx, privateKey) => {
       let tx = new Tx(rawTx);
@@ -115,30 +228,14 @@ module.exports = (function (){
     },
     _serializeSignedTx: (tx) => {
       return tx.serialize();
-    },
-    toggleUserSpecialApproval: async (userId) => {
-      await setup.promise;
-      const p = promise();
-      const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
-      const rawTx = await _private._generateRawTxForApprovalToggle(userId);
-      const signedTx = _private._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
-      const serializedTx = _private._serializeSignedTx(signedTx);
-      web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
-        if (err) {
-          p.reject(err);
-        } else {
-          p.resolve(hash);
-        }
-      });
-
-      return p.promise;
     }
   };
 
   _public = {
     web3,
     toggleUserSpecialApproval: _private.toggleUserSpecialApproval,
-    getTokenBalance: _private.getTokenBalance
+    getTokenBalance: _private.getTokenBalance,
+    ethSign: _private.ethSign
   };
 
   return _public;

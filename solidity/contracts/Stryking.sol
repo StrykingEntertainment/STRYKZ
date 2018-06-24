@@ -231,7 +231,7 @@ contract Stryking is IERC20, Ownable {
     return true;
   }
 
-  function specialApprove(uint256 _nonce, bytes32 _ethSignedMessageHash, bytes _sig) public returns (bool) {
+  function specialApprove(uint256 _nonce, bytes32 _ethSignedMessageHash, bytes _sig) onlyOwner public returns (bool) {
     address _owner = _ethSignedMessageHash.recover(_sig);
     require(_nonce == specialAllowed[_owner][msg.sender] + 1);
     require(keccak256(abi.encode(_nonce)) == _ethSignedMessageHash);

@@ -5,8 +5,20 @@
     "logging": false,
     "dialect": "mysql"
   },
-  "deployedContractAddresses": {
-    "stryking": "0x6e39aac18c56b223ae610c3a5d27b3bdf4eed336"
+  "development": {
+    "deployedContractAddresses": {
+      "stryking": "0xcc7d836930d236aa81e744dd4783035f232d7fe9"
+    }
+  },
+  "rinkeby": {
+    "deployedContractAddresses": {
+      "stryking": "0x6e39aac18c56b223ae610c3a5d27b3bdf4eed336"
+    }
+  },
+  "ropsten": {
+    "deployedContractAddresses": {
+      "stryking": "0x6e39aac18c56b223ae610c3a5d27b3bdf4eed336"
+    }
   },
   "networkId": 3
 }
