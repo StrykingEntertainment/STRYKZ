@@ -22,7 +22,7 @@ app.get('/getChildWallet', async (req, res) => {
 });
 
 app.get('/getUser/', async (req, res) => {
-  if (isNaN(Number(req.query.id))) {
+  if (isNaN(Number(req.query.userId))) {
     res.status(400).send('Please specify the user id');
     return;
   }
@@ -68,8 +68,8 @@ app.post('/tokenTransferFrom', async (req, res) => {
 
 app.post('/toggleUserSpecialApproval', async (req, res) => {
   const userId = req.body.userId;
-  const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId))
-  const fundsWallet = wallet.parseWallet(await wallet.getFundsWallet());
+  const userWallet = wallet.parseWallet(wallet.getChildWallet(userId))
+  const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
   try {
     const strykingContract = await blockchain.strykingContract();
     const currentNonce = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
@@ -80,10 +80,89 @@ app.post('/toggleUserSpecialApproval', async (req, res) => {
       ethUtils.toBuffer(keccak256(approvalNonce)),
       Buffer.from(userWallet.privateKey, 'hex')
     );
-    res.send(await strykingContract.specialApprove(approvalNonce, nonceHash, userSignedNonce));
+    const msg = await strykingContract.specialApprove(approvalNonce, nonceHash, userSignedNonce);
+    logger.log('INFO', `toggleUserSpecialApproval called with response: ${msg}`, {
+      userId,
+      userWallet: userWallet.address,
+      fundsWallet: fundsWallet.address
+    });
+    res.send(msg);
   } catch (e) {
-    console.log(e);
-    res.status(500).send(e);
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
+  }
+});
+
+app.get('/userApproval', async (req, res) => {
+  const userId = req.query.userId
+  const userWallet = wallet.parseWallet(wallet.getChildWallet(userId));
+  const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
+  try {
+    const strykingContract = await blockchain.strykingContract();
+    const msg = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
+    logger.log('INFO', `userApproval called with response: ${msg}`);
+    res.send(msg);
+  } catch(e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message)
+  }
+});
+
+app.post('/transferTokensFromUser', async (req, res) => {
+  let from;
+  if (req.body.from) {
+    from = req.body.from;
+  } else if (req.body.userId) {
+    from = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
+  } else {
+    throw new Error('userId or from fields not specified');
+  }
+  if (typeof from !== 'string') throw new Error('from is not hex address');
+  if (from.slice(0,2) !== '0x') throw new Error('from should start with 0x');
+  const to = req.body.to;
+  const amount = req.body.amount;
+  if (typeof to !== 'string') throw new Error('to needs to be a hex string');
+  if (to.slice(0, 2) !== '0x') throw new Error('to should start with 0x');
+  if (typeof amount !== 'number') throw new Error('amount should be a number');
+  try {
+    const strykingContract = await blockchain.strykingContract();
+    const msg = await strykingContract.transferFrom('0x' + from, to, Math.pow(10, 18) * amount);
+    logger.log('INFO', `trasnferTokens called with response: ${msg}`, {
+      from,
+      to,
+      amount
+    });
+    res.send(msg);
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
+  }
+});
+
+app.post('/transferTokensFromFunds', async (req, res) => {
+  let to;
+  if (req.body.to) {
+    to = req.body.to;
+  } else if (req.body.userId) {
+    to = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
+  } else {
+    throw new Error('userId or to fields not specified');
+  }
+  if (typeof to !== 'string') throw new Error('to is not hex address');
+  if (to.slice(0,2) !== '0x') throw new Error('to should start with 0x');
+  const amount = req.body.amount;
+  if (typeof amount !== 'number') throw new Error('amount is not a number');
+  try {
+    const strykingContract = blockchain.strykingContract();
+    const msg = await strykingContract.transfer(to, amount * Math.pow(10, 18));
+    logger.log('INFO', `transferTokensFromFunds called with response: ${msg}`, {
+      to,
+      amount
+    });
+    res.send(msg);
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
   }
 });
 
