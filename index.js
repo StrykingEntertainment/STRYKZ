@@ -68,13 +68,22 @@ app.post('/tokenTransferFrom', async (req, res) => {
 });
 
 app.post('/toggleUserSpecialApproval', async (req, res) => {
-  if (req.body.userId === undefined) {
-    res.status(400).send('Please specify the userId');
-    return;
-  }
+  // if (req.body.userId === undefined) {
+  //   res.status(400).send('Please specify the userId');
+  //   return;
+  // }
+  // const userId = req.body.userId;
+  // try {
+  //   res.send(await blockchain.toggleUserSpecialApproval(userId));
+  // } catch (e) {
+  //   console.log(e);
+  //   res.status(500).send(e);
+  // }
+  const fundsWallet = wallet.parseWallet(await wallet.getFundsWallet());
   const userId = req.body.userId;
   try {
-    res.send(await blockchain.toggleUserSpecialApproval(userId));
+    const strykingContract = await blockchain.strykingContract();
+    res.send(await strykingContract.balanceOf('0x' + fundsWallet.address));
   } catch (e) {
     console.log(e);
     res.status(500).send(e);

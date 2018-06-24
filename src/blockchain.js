@@ -87,10 +87,10 @@ module.exports = (function (){
       );
       return res;
     },
-    _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => {
+    _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => { // TODO: failing...?
       await setup.promise;
       try {
-        return 2 * await _strykingContract.specialApprove.estimateGas( // TODO: failing..?
+        return 2 * await _strykingContract.specialApprove.estimateGas(
           nonce,
           _private._messageHash(nonce),
           _private.ethSign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
@@ -151,21 +151,6 @@ module.exports = (function (){
         data: await data
       }
     },
-    strykingContract: () => {
-      let res = {};
-      for (let method in _strykingContract.methods) {
-        res[method] = async function() {
-          await setup.promise;
-          const p = promise();
-          const rawTx = await _private
-          // TODO: continue writing after implementing generaterawtxformethod
-
-          return p.promise;
-        }
-      }
-
-      return res;
-    },
     _sendRawTransaction: async (serializedTx) => {
       const p = promise();
       web3.eth.sendRawTransaction('0x' + serializedTx.toString('hex'), function(err, hash) {
@@ -176,6 +161,73 @@ module.exports = (function (){
         }
       });
       return p.promise;
+    },
+
+    _getData: async (contract, method, args) => {
+      if (typeof contract !== 'object') throw new Error('contract is not an object');
+      if (typeof method !== 'string') throw new Error('method name is not a string');
+      if (!Array.isArray(args)) throw new Error('args is not an array');
+      try {
+        return await contract[method].getData.apply(contract[method], args);
+      } catch (e) {
+        console.log('getData error');
+        throw new Error(e);
+      }
+    },
+    _getTransactionHash: (rawTxHexString) => {
+      return web3.sha3(rawTxHexString, {encoding: 'hex'});
+    },
+    _estimateGas: async (contract, method, args) => {
+      if (typeof contract !== 'object') throw new Error('contract is not an object');
+      if (typeof method !== 'string') throw new Error('method name is not a string');
+      if (!Array.isArray(args)) throw new Error('args is not an array');
+      try {
+        return 2 * await contract[method].estimateGas.apply(contract[method], args);
+      } catch (e) {
+        console.log("gas estimation error: using default gasLimit of 2900000")
+        return 2900000;
+      }
+    },
+    _signRawTx: (rawTx, privateKey) => {
+      let tx = new Tx(rawTx);
+      tx.sign(privateKey);
+      return tx;
+    },
+    _serializeSignedTx: (tx) => {
+      return tx.serialize();
+    },
+    strykingContract: (contract = _strykingContract, wallet) => {
+      let res = {};
+      contract.abi.map((method) => {
+        if (method.type !== 'function') return;
+        if (method.stateMutability === 'view') {
+          res[method.name] = async function() {
+            await setup.promise;
+            const p = promise();
+            let args = Array.prototype.slice.apply(arguments);
+            args.push(function(err, res) {
+              if (err) {
+                p.reject(err);
+              } else {
+                p.resolve(res);
+              }
+            })
+            contract[method.name].apply(contract, args);
+            return p.promise;
+          }.bind(contract);
+        } else {
+          res[method.name] = async function() {
+            await setup.promise;
+            let args = Array.prototype.slice.apply(arguments);
+            if (wallet === undefined) wallet = fundsWallet;
+            const rawTx = await _private._generateRawTx(contract, method.name, args);
+            const signedTx = _private._signRawTx(rawTx, Buffer.from(wallet.privateKey, 'hex'));
+            const serializedTx = _private._serializeSignedTx(signedTx);
+            return _private._sendRawTransaction(serializedTx);
+          }.bind(contract);
+        }
+      });
+      return res;
     },
     toggleUserSpecialApproval: async (userId) => {
       await setup.promise;
@@ -198,36 +250,6 @@ module.exports = (function (){
       const signedTx = _private._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
       const serializedTx = _private._serializeSignedTx(signedTx);
       return _private._sendRawTransaction(serializedTx);
-    },
-    _getData: async (contract, method, args) => {
-      if (typeof contract !== 'object') throw new Error('contract is not an object');
-      if (typeof method !== 'string') throw new Error('method name is not a string');
-      if (!Array.isArray(args)) throw new Error('args is not an array');
-      try {
-        return await contract[method].getData.apply(contract[method], args);
-      } catch (e) {
-        console.log('getData error');
-        throw new Error(e);
-      }
-    },
-    _estimateGas: async (contract, method, args) => {
-      if (typeof contract !== 'object') throw new Error('contract is not an object');
-      if (typeof method !== 'string') throw new Error('method name is not a string');
-      if (!Array.isArray(args)) throw new Error('args is not an array');
-      try {
-        return 2 * await contract[method].estimateGas.apply(contract[method], args);
-      } catch (e) {
-        console.log("gas estimation error: using default gasLimit of 2900000")
-        return 2900000;
-      }
-    },
-    _signRawTx: (rawTx, privateKey) => {
-      let tx = new Tx(rawTx);
-      tx.sign(privateKey);
-      return tx;
-    },
-    _serializeSignedTx: (tx) => {
-      return tx.serialize();
     }
   };
 
@@ -235,7 +257,8 @@ module.exports = (function (){
     web3,
     toggleUserSpecialApproval: _private.toggleUserSpecialApproval,
     getTokenBalance: _private.getTokenBalance,
-    ethSign: _private.ethSign
+    ethSign: _private.ethSign,
+    strykingContract: _private.strykingContract
   };
 
   return _public;
