@@ -67,17 +67,6 @@ app.post('/tokenTransferFrom', async (req, res) => {
 });
 
 app.post('/toggleUserSpecialApproval', async (req, res) => {
-  // if (req.body.userId === undefined) {
-  //   res.status(400).send('Please specify the userId');
-  //   return;
-  // }
-  // const userId = req.body.userId;
-  // try {
-  //   res.send(await blockchain.toggleUserSpecialApproval(userId));
-  // } catch (e) {
-  //   console.log(e);
-  //   res.status(500).send(e);
-  // }
   const userId = req.body.userId;
   const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId))
   const fundsWallet = wallet.parseWallet(await wallet.getFundsWallet());
