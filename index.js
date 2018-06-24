@@ -6,8 +6,7 @@ const db = require('./src/db.js');
 const wallet = require('./src/wallet.js');
 const logger = require('./src/logger.js');
 const blockchain = require('./src/blockchain.js');
-const web3 = require('./src/web3.js')
-
+const keccak256 = require('./src/keccak256.js');
 
 app.get('/', (req, res) => res.send('Stryking Eth Server'));
 
@@ -79,11 +78,20 @@ app.post('/toggleUserSpecialApproval', async (req, res) => {
   //   console.log(e);
   //   res.status(500).send(e);
   // }
-  const fundsWallet = wallet.parseWallet(await wallet.getFundsWallet());
   const userId = req.body.userId;
+  const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId))
+  const fundsWallet = wallet.parseWallet(await wallet.getFundsWallet());
   try {
     const strykingContract = await blockchain.strykingContract();
-    res.send(await strykingContract.balanceOf('0x' + fundsWallet.address));
+    const currentNonce = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
+    if (isNaN(Number(currentNonce))) throw new Error('currentNonce is not a number');
+    const approvalNonce = Number(currentNonce) + 1;
+    const nonceHash = '0x' + keccak256(approvalNonce);
+    const userSignedNonce = blockchain.ethSign(
+      ethUtils.toBuffer(keccak256(approvalNonce)),
+      Buffer.from(userWallet.privateKey, 'hex')
+    );
+    res.send(await strykingContract.specialApprove(approvalNonce, nonceHash, userSignedNonce));
   } catch (e) {
     console.log(e);
     res.status(500).send(e);

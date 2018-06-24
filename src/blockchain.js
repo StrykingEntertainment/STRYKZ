@@ -235,6 +235,10 @@ module.exports = (function (){
       const currentNonce = _private._getApprovalNonce(userId);
       const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
       const approvalNonce = await currentNonce + 1;
+      console.log(_private.ethSign(
+        ethUtils.toBuffer(keccak256(approvalNonce)),
+        Buffer.from(userWallet.privateKey, 'hex')
+      ));
       const rawTx = await _private._generateRawTx(
         _strykingContract,
         'specialApprove',
