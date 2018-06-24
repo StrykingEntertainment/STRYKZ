@@ -86,7 +86,7 @@ app.post('/toggleUserSpecialApproval', async (req, res) => {
     const currentNonce = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
     if (isNaN(Number(currentNonce))) throw new Error('currentNonce is not a number');
     const approvalNonce = Number(currentNonce) + 1;
-    const nonceHash = '0x' + keccak256(approvalNonce);
+    const nonceHash = keccak256(approvalNonce);
     const userSignedNonce = blockchain.ethSign(
       ethUtils.toBuffer(keccak256(approvalNonce)),
       Buffer.from(userWallet.privateKey, 'hex')
