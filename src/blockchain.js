@@ -137,15 +137,8 @@ module.exports = (function (){
 
   _public = {
     web3,
-    _getFundsWalletNonce: _private._getFundsWalletNonce,
-    _getGasPrice: _private._getGasPrice,
-    _getGasLimit: _private._getGasLimit,
-    _specialApproveGetData: _private._specialApproveGetData,
-    _signTx: _private._signTx,
-    _signRawTx: _private._signRawTx,
-    _generateRawTxForApprovalToggle: _private._generateRawTxForApprovalToggle,
-    _serializeSignedTx: _private._serializeSignedTx,
-    toggleUserSpecialApproval: _private.toggleUserSpecialApproval
+    toggleUserSpecialApproval: _private.toggleUserSpecialApproval,
+    getTokenBalance: _private.getTokenBalance
   };
 
   return _public;
