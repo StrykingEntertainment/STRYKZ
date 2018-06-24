@@ -65,68 +65,6 @@ module.exports = (function (){
       // spec that Ethereum uses for a ECDSA signature
       return '0x' + res.r.toString('hex').slice(0,64) + res.s.toString('hex').slice(0,64) + res.v.toString(16).slice(0,2);
     },
-    _getApprovalNonce: async (userId) => {
-      await setup.promise;
-      const p = promise();
-      const userWalletAddress = '0x' + wallet.parseWallet(await wallet.getChildWallet(userId)).address;
-      _strykingContract.specialAllowance(userWalletAddress, fundsWalletAddress, (err, res) => {
-        if (err) {
-          p.reject(err);
-        } else {
-          p.resolve(res.toNumber());
-        }
-      });
-      return p.promise;
-    },
-    _specialApproveGetData: async (nonce, privateKeyBuffer) => {
-      await setup.promise;
-      const res = await _strykingContract.specialApprove.getData(
-        nonce,
-        _private._messageHash(nonce),
-        _private.ethSign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
-      );
-      return res;
-    },
-    _specialApproveEstimateGas: async (nonce, privateKeyBuffer) => { // TODO: failing...?
-      await setup.promise;
-      try {
-        return 2 * await _strykingContract.specialApprove.estimateGas(
-          nonce,
-          _private._messageHash(nonce),
-          _private.ethSign(ethUtils.toBuffer(keccak256(nonce)), privateKeyBuffer)
-        );
-      } catch (e) {
-        console.log("gas estimation error: using default gasLimit of 2900000")
-        return 2900000;
-      }
-    },
-    _generateRawTxForApprovalToggle: async (userId) => {
-      await setup.promise;
-      const accountNonce = _private._getFundsWalletNonce();
-      const gasPrice = _private._getGasPrice();
-      const to = _strykingContract.address;
-      const value = web3.toHex(web3.toWei('0', 'ether'));
-      const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
-      const currentNonce = await _private._getApprovalNonce(userId);
-      const approvalNonce = currentNonce + 1;
-      const data = _private._specialApproveGetData(
-        approvalNonce,
-        Buffer.from(userWallet.privateKey, 'hex')
-      );
-      const estimatedGas = _private._specialApproveEstimateGas(
-        approvalNonce,
-        Buffer.from(userWallet.privateKey, 'hex')
-      );
-      return {
-        nonce: web3.toHex(await accountNonce),
-        gasPrice: Math.min((await gasPrice).toNumber() * 2, 10000000000), // 10000000000
-        gasLimit: 2900000, //2 * await estimatedGas, // 
-        to,
-        from: fundsWalletAddress,
-        value,
-        data: await data
-      };
-    },
     _generateRawTx: async (contract, method, args = [], options = {}) => {
       await setup.promise;
       if (contract === undefined) throw new Error('contract is undefined');
@@ -228,38 +166,11 @@ module.exports = (function (){
         }
       });
       return res;
-    },
-    toggleUserSpecialApproval: async (userId) => {
-      await setup.promise;
-      // const rawTx = await _private._generateRawTxForApprovalToggle(userId);
-      const currentNonce = _private._getApprovalNonce(userId);
-      const userWallet = wallet.parseWallet(await wallet.getChildWallet(userId));
-      const approvalNonce = await currentNonce + 1;
-      console.log(_private.ethSign(
-        ethUtils.toBuffer(keccak256(approvalNonce)),
-        Buffer.from(userWallet.privateKey, 'hex')
-      ));
-      const rawTx = await _private._generateRawTx(
-        _strykingContract,
-        'specialApprove',
-        [
-          approvalNonce,
-          '0x' + keccak256(approvalNonce),
-          _private.ethSign(
-            ethUtils.toBuffer(keccak256(approvalNonce)),
-            Buffer.from(userWallet.privateKey, 'hex')
-          )
-        ]
-      );
-      const signedTx = _private._signRawTx(rawTx, Buffer.from(fundsWallet.privateKey, 'hex'));
-      const serializedTx = _private._serializeSignedTx(signedTx);
-      return _private._sendRawTransaction(serializedTx);
     }
   };
 
   _public = {
     web3,
-    toggleUserSpecialApproval: _private.toggleUserSpecialApproval,
     getTokenBalance: _private.getTokenBalance,
     ethSign: _private.ethSign,
     strykingContract: _private.strykingContract
