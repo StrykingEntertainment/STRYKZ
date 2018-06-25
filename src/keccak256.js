@@ -1,4 +1,5 @@
-const web3 = require('./web3.js');
+const Web3 = require('web3');
+const web3 = new Web3();
 const leftPad = require('./leftpad.js');
 
 module.exports = function() {
