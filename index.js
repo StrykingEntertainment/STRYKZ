@@ -13,24 +13,34 @@ app.get('/', (req, res) => res.send('Stryking Eth Server'));
 app.get('/getUserCount', async (req, res) => res.send((await db.getUserCount()).toString()));
 
 app.get('/getChildWallet', async (req, res) => {
-  if (isNaN(Number(req.query.index))) {
-    res.status(400).send('Please specify the child index');
-  } else {
-    const childWallet = wallet.getChildWallet(req.query.index);
-    res.send(wallet.parseWallet(childWallet));
+  try {
+    if (isNaN(Number(req.query.index))) {
+      res.status(400).send('Please specify the child index');
+    } else {
+      const childWallet = wallet.getChildWallet(req.query.index);
+      res.send(wallet.parseWallet(childWallet));
+    }
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
   }
 });
 
 app.get('/getUser/', async (req, res) => {
-  if (isNaN(Number(req.query.userId))) {
-    res.status(400).send('Please specify the user id');
-    return;
-  }
-  const user = await db.getUser(req.query.id);
-  if (user === null) {
-    res.status(404).send("User not found");
-  } else {
-    res.send(user);
+  try {
+    if (isNaN(Number(req.query.userId))) {
+      res.status(400).send('Please specify the user id');
+      return;
+    }
+    const user = await db.getUser(req.query.id);
+    if (user === null) {
+      res.status(404).send("User not found");
+    } else {
+      res.send(user);
+    }
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
   }
 });
 
@@ -39,19 +49,29 @@ app.get('/getUserTokenBalance', async (req, res) => {
 });
 
 app.post('/generateUser', async (req, res) => {
-  const name = req.body.name;
-  if (name === undefined) {
-    res.status(400).send('Please specify the name');
-  } else {
-    const newUser = await db.generateUser(name);
-    res.send(newUser);
+  try {
+    const name = req.body.name;
+    if (name === undefined) {
+      res.status(400).send('Please specify the name');
+    } else {
+      const newUser = await db.generateUser(name);
+      res.send(newUser);
+    }
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
   }
 });
 
 app.get('/getFundsWallet', async (req, res) => {
-  const fundsWallet = wallet.getFundsWallet();
-  res.send(wallet.parseWallet(fundsWallet));
-  logger.log('LOG', 'FUNDS_WALLET: details retrieved')
+  try {
+    const fundsWallet = wallet.getFundsWallet();
+    res.send(wallet.parseWallet(fundsWallet));
+    logger.log('LOG', 'FUNDS_WALLET: details retrieved');
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
+  }
 });
 
 app.get('/getWalletLogs', async (req, res) => {
@@ -67,10 +87,10 @@ app.post('/tokenTransferFrom', async (req, res) => {
 });
 
 app.post('/toggleUserSpecialApproval', async (req, res) => {
+  try {
   const userId = req.body.userId;
   const userWallet = wallet.parseWallet(wallet.getChildWallet(userId))
   const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
-  try {
     const strykingContract = await blockchain.strykingContract();
     const currentNonce = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
     if (isNaN(Number(currentNonce))) throw new Error('currentNonce is not a number');
@@ -94,10 +114,10 @@ app.post('/toggleUserSpecialApproval', async (req, res) => {
 });
 
 app.get('/userApproval', async (req, res) => {
-  const userId = req.query.userId
-  const userWallet = wallet.parseWallet(wallet.getChildWallet(userId));
-  const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
   try {
+    const userId = req.query.userId
+    const userWallet = wallet.parseWallet(wallet.getChildWallet(userId));
+    const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
     const strykingContract = await blockchain.strykingContract();
     const msg = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
     logger.log('INFO', `userApproval called with response: ${msg}`);
@@ -109,22 +129,22 @@ app.get('/userApproval', async (req, res) => {
 });
 
 app.post('/transferTokensFromUser', async (req, res) => {
-  let from;
-  if (req.body.from) {
-    from = req.body.from;
-  } else if (req.body.userId) {
-    from = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
-  } else {
-    throw new Error('userId or from fields not specified');
-  }
-  if (typeof from !== 'string') throw new Error('from is not hex address');
-  if (from.slice(0,2) !== '0x') throw new Error('from should start with 0x');
-  const to = req.body.to;
-  const amount = req.body.amount;
-  if (typeof to !== 'string') throw new Error('to needs to be a hex string');
-  if (to.slice(0, 2) !== '0x') throw new Error('to should start with 0x');
-  if (typeof amount !== 'number') throw new Error('amount should be a number');
   try {
+    let from;
+    if (req.body.from) {
+      from = req.body.from;
+    } else if (req.body.userId) {
+      from = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
+    } else {
+      throw new Error('userId or from fields not specified');
+    }
+    if (typeof from !== 'string') throw new Error('from is not hex address');
+    if (from.slice(0,2) !== '0x') throw new Error('from should start with 0x');
+    const to = req.body.to;
+    const amount = req.body.amount;
+    if (typeof to !== 'string') throw new Error('to needs to be a hex string');
+    if (to.slice(0, 2) !== '0x') throw new Error('to should start with 0x');
+    if (typeof amount !== 'number') throw new Error('amount should be a number');
     const strykingContract = await blockchain.strykingContract();
     const msg = await strykingContract.transferFrom('0x' + from, to, Math.pow(10, 18) * amount);
     logger.log('INFO', `trasnferTokens called with response: ${msg}`, {
@@ -140,19 +160,19 @@ app.post('/transferTokensFromUser', async (req, res) => {
 });
 
 app.post('/transferTokensFromFunds', async (req, res) => {
-  let to;
-  if (req.body.to) {
-    to = req.body.to;
-  } else if (req.body.userId) {
-    to = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
-  } else {
-    throw new Error('userId or to fields not specified');
-  }
-  if (typeof to !== 'string') throw new Error('to is not hex address');
-  if (to.slice(0,2) !== '0x') throw new Error('to should start with 0x');
-  const amount = req.body.amount;
-  if (typeof amount !== 'number') throw new Error('amount is not a number');
   try {
+    let to;
+    if (req.body.to) {
+      to = req.body.to;
+    } else if (req.body.userId) {
+      to = '0x' + wallet.parseWallet(wallet.getChildWallet(req.body.userId)).address;
+    } else {
+      throw new Error('userId or to fields not specified');
+    }
+    if (typeof to !== 'string') throw new Error('to is not hex address');
+    if (to.slice(0,2) !== '0x') throw new Error('to should start with 0x');
+    const amount = req.body.amount;
+    if (typeof amount !== 'number') throw new Error('amount is not a number');
     const strykingContract = blockchain.strykingContract();
     const msg = await strykingContract.transfer(to, amount * Math.pow(10, 18));
     logger.log('INFO', `transferTokensFromFunds called with response: ${msg}`, {
@@ -167,10 +187,15 @@ app.post('/transferTokensFromFunds', async (req, res) => {
 });
 
 app.get('/logs', async (req, res) => {
-  if (req.query.id) {
-    res.send(await db.getLogById(req.query.id));
-  } else {
-    res.send(await db.getLogs());
+  try {
+    if (req.query.id) {
+      res.send(await db.getLogById(req.query.id));
+    } else {
+      res.send(await db.getLogs());
+    }
+  } catch (e) {
+    logger.log('ERROR', e.message, e);
+    res.status(500).send(e.message);
   }
 })
 
