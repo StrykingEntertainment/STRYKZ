@@ -42,3 +42,9 @@ function keccak256(...args) {
   - call specialApprove(NONCE, _ethSignedMessageHash, _sig)
   - verify that specialAllowance is true
   - verify that transfers can be done
+
+General conventions
+- Preferred format for data is always hex, not Buffer
+  - hex should be represented without the leading '0x'
+  - inputs to ethereum / web3 methods expect '0x', so remember to add that in
+    - eg. '0x' + userWallet.address
