@@ -7,13 +7,13 @@ const hdWallet = wallet.hdWallet;
 module.exports = (function(){
 
   const sequelize = new Sequelize(
-    settings.database.name,
+    secrets.database.name,
     secrets.database_username,
     secrets.database_password,
     {
-      host: settings.database.host,
-      dialect: settings.database.dialect,
-      logging: settings.database.logging,
+      host: secrets.database.host,
+      dialect: secrets.database.dialect,
+      logging: secrets.database.logging,
     }
   )
 
