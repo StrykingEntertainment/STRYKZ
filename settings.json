@@ -11,7 +11,7 @@
   },
   "ropsten": {
     "deployedContractAddresses": {
-      "stryking": "0x6e39aac18c56b223ae610c3a5d27b3bdf4eed336"
+      "stryking": "0xd58f7cec5aa87d19be9aef0cb8fffa0972f0ad1a"
     }
   },
   "networkId": 3

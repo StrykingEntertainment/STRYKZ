@@ -174,7 +174,7 @@ contract Stryking is IERC20, Ownable {
   using ECRecovery for bytes32;
 
   string public name = "Stryking Token";
-  string public symbol = "STZ";
+  string public symbol = "STRY";
   uint8 public constant decimals = 18;
   uint256 public constant decimalFactor = 10 ** uint256(decimals);
   uint256 public constant totalSupply = 2000000000 * decimalFactor;
