@@ -65,8 +65,8 @@ app.post('/generateUser', async (req, res) => {
 
 app.get('/getFundsWallet', async (req, res) => {
   try {
-    const fundsWallet = wallet.getFundsWallet();
-    res.send(wallet.parseWallet(fundsWallet));
+    const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
+    res.send(fundsWallet);
     logger.log('LOG', 'FUNDS_WALLET: details retrieved');
   } catch (e) {
     logger.log('ERROR', e.message, e);
@@ -78,19 +78,11 @@ app.get('/getWalletLogs', async (req, res) => {
   res.send(db.getWalletLogs());
 });
 
-app.post('/tokenTransfer', async (req, res) => {
-  res.send('fund tokens');
-});
-
-app.post('/tokenTransferFrom', async (req, res) => {
-  res.send('token transfer from');
-});
-
 app.post('/toggleUserSpecialApproval', async (req, res) => {
   try {
-  const userId = req.body.userId;
-  const userWallet = wallet.parseWallet(wallet.getChildWallet(userId))
-  const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
+    const userId = req.body.userId;
+    const userWallet = wallet.parseWallet(wallet.getChildWallet(userId))
+    const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
     const strykingContract = await blockchain.strykingContract();
     const currentNonce = await strykingContract.specialAllowance('0x' + userWallet.address, '0x' + fundsWallet.address);
     if (isNaN(Number(currentNonce))) throw new Error('currentNonce is not a number');
