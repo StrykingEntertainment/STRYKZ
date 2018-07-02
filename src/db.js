@@ -20,7 +20,7 @@ module.exports = (function(){
   const _private = {
     tables: require('./tables.js')(sequelize),
     getChildWallet: (index) => {
-      return hdWallet.deriveChild(index).getWallet();
+      return wallet.parseWallet(wallet.getChildWallet(index));
     }
   }
 
@@ -96,7 +96,7 @@ module.exports = (function(){
         return await User.create({
           name,
           index: currentIndex,
-          publicKey: childWallet.getPublicKey().toString('hex'),
+          publicKey: childWallet.publicKey,
         });
       } catch (e) {
         return e;
