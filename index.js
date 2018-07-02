@@ -108,7 +108,12 @@ app.post('/generateUser', async (req, res) => {
 app.get('/getFundsWallet', async (req, res) => {
   try {
     const fundsWallet = wallet.parseWallet(wallet.getFundsWallet());
-    res.send(fundsWallet);
+    const strykingContract = await blockchain.strykingContract();
+    const tokenBalance = await strykingContract.balanceOf('0x' + fundsWallet.address);
+    res.send({
+      ...fundsWallet,
+      tokenBalance
+    });
     logger.log('LOG', 'FUNDS_WALLET: details retrieved');
   } catch (e) {
     logger.log('ERROR', e.message, e.stack);
