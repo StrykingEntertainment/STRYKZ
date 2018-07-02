@@ -32,7 +32,7 @@ app.get('/getUser/', async (req, res) => {
       res.status(400).send('Please specify the user id');
       return;
     }
-    const user = await db.getUser(req.query.id);
+    const user = await db.getUser(req.query.userId);
     if (user === null) {
       res.status(404).send("User not found");
     } else {
