@@ -74,9 +74,13 @@ module.exports = (function(){
       const User = await _private.tables.User;
       return User.count();
     },
-    getUser: async (id) => {
+    getUserByIndex: async (index) => {
       const User = await _private.tables.User;
-      return User.findOne({where: {id}})
+      return User.findOne({where: {index}});
+    },
+    getUserById: async (id) => {
+      const User = await _private.tables.User;
+      return User.findOne({where: {id}});
     },
     getMaxIndex: async () => {
       const User = await _private.tables.User;

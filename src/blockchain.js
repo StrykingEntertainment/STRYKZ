@@ -166,6 +166,12 @@ module.exports = (function (){
         }
       });
       return res;
+    },
+    getStrykingContractDetails: () => {
+      return {
+        contractAddress: settings[network].deployedContractAddresses.stryking,
+        abi: abi.stryking
+      }
     }
   };
 
@@ -173,7 +179,8 @@ module.exports = (function (){
     web3,
     getTokenBalance: _private.getTokenBalance,
     ethSign: _private.ethSign,
-    strykingContract: _private.strykingContract
+    strykingContract: _private.strykingContract,
+    getStrykingContractDetails: _private.getStrykingContractDetails
   };
 
   return _public;
