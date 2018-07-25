@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const ethUtils = require('ethereumjs-util');
 app.use(express.json());
+const txPool = require('./src/tx.js')
 const db = require('./src/db.js');
 const wallet = require('./src/wallet.js');
 const logger = require('./src/logger.js');
@@ -10,8 +11,17 @@ const keccak256 = require('./src/keccak256.js');
 const validation = require('./src/validation.js');
 const toNumber = validation.toNumber;
 const abi = require('./src/abi.js');
+const fs = require('fs')
 
-app.get('/', (req, res) => res.send('Stryking Eth Server'));
+app.get('/', (req, res) => {
+  fs.readFile('./doc/docs.md', (err, data) => {
+    if (err) {
+      res.send('Stryking Eth Server')
+    } else {
+      res.send(data)
+    }
+  });
+});
 
 app.get('/getUserCount', async (req, res) => res.send((await db.getUserCount()).toString()));
 
@@ -152,6 +162,7 @@ app.post('/toggleUserSpecialApproval', async (req, res) => {
       fundsWallet: fundsWallet.address
     });
     res.send(msg);
+    db.createTransaction(msg);
   } catch (e) {
     logger.log('ERROR', e.message, e.stack);
     res.status(500).send(e.message);
@@ -191,12 +202,13 @@ app.post('/transferTokensFromUser', async (req, res) => {
     if (!validation.isNumber(amount)) throw new Error('amount is not a number');
     const strykingContract = await blockchain.strykingContract();
     const msg = await strykingContract.transferFrom(from, to, Math.pow(10, 18) * amount);
-    logger.log('INFO', `trasnferTokens called with response: ${msg}`, {
+    logger.log('INFO', `transferTokens called with response: ${msg}`, {
       from,
       to,
       amount
     });
     res.send(msg);
+    db.createTransaction(msg);
   } catch (e) {
     logger.log('ERROR', e.message, e.stack);
     res.status(500).send(e.message);
@@ -223,6 +235,7 @@ app.post('/transferTokensFromFunds', async (req, res) => {
       amount
     });
     res.send(msg);
+    db.createTransaction(msg);
   } catch (e) {
     logger.log('ERROR', e.message, e.stack);
     res.status(500).send(e.message);

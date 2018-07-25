@@ -1,6 +1,7 @@
 const settings = require('../settings.json');
 const secrets = require('../secrets.json');
 const Sequelize = require('sequelize');
+const Op = Sequelize.Op;
 const wallet = require('./wallet.js');
 const hdWallet = wallet.hdWallet;
 
@@ -90,6 +91,31 @@ module.exports = (function(){
       } else {
         return maxIndexUser.index;
       }
+    },
+    createTransaction: async (tx) => {
+      const Txn = await _private.tables.Txn;
+      try {
+        return await Txn.create({tx, status: 'Pending'});
+      } catch (e) {
+        return e;
+      }
+    },
+    getLatestTransactions: async (ms) => {
+      const Txn = await _private.tables.Txn;
+      return Txn.findAll({
+        where: {
+          createdAt: {
+            [Op.lt]: new Date(),
+            [Op.gt]: new Date(new Date() - ms)
+          }
+        }
+      })
+    },
+    updateTransactionStatus: async (id, status) => {
+      const Txn = await _private.tables.Txn;
+      const txn = await Txn.findById(id);
+      txn.status = status;
+      return await txn.save();
     },
     generateUser: async (name) => {
       const maxIndex = await _public.getMaxIndex();

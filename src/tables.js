@@ -29,6 +29,16 @@ module.exports = function(sequelize) {
           type: Sequelize.TEXT,
         }
       }
+    ),
+    Txn: sequelize.define(
+      'txn', {
+        tx: {
+          type: Sequelize.STRING,
+        },
+        status: {
+          type: Sequelize.STRING,
+        }
+      }
     )
   }
 

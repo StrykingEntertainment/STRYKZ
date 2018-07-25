@@ -172,6 +172,30 @@ module.exports = (function (){
         contractAddress: settings[network].deployedContractAddresses.stryking,
         abi: abi.stryking
       }
+    },
+    getTransactionStatus: async (tx) => {
+      const p = promise();
+      web3.eth.getTransactionReceipt(tx, (err, res) => {
+        if (err) p.reject(err);
+        else p.resolve(res);
+      });
+      try {
+        let response = await p.promise;
+        let status;
+        if (response === null) {
+          status = "Pending"
+        } else {
+          if (response.status === "0x1") {
+            status = "Success"
+          } else {
+            status = "Failure"
+          }
+        }
+        return status;
+      } catch (e) {
+        logger.log('ERROR', e, tx.toString())
+        return "Error"
+      }
     }
   };
 
@@ -180,7 +204,8 @@ module.exports = (function (){
     getTokenBalance: _private.getTokenBalance,
     ethSign: _private.ethSign,
     strykingContract: _private.strykingContract,
-    getStrykingContractDetails: _private.getStrykingContractDetails
+    getStrykingContractDetails: _private.getStrykingContractDetails,
+    getTransactionStatus: _private.getTransactionStatus
   };
 
   return _public;
